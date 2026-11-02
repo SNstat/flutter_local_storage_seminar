@@ -15,19 +15,19 @@ class AuthorDao extends DatabaseAccessor<AppDb> with _$AuthorDaoMixin {
     return select(author).get(); 
   }
 
-  Future<AuthorData> getEmployeeById(int id) async {
-    return (select(author)..where((t) => t.id.equals(id))).getSingle();
+  Future<AuthorData> getAuthorById(int id) async {
+    return (select(author)..where((tbl) => tbl.id.equals(id))).getSingle();
   }
 
-  Future<bool> updateEmployee(AuthorCompanion companion) async {
+  Future<bool> updateAuthor(AuthorCompanion companion) async {
     return update(author).replace(companion);
   }
 
-  Future<int> insertEmployee(AuthorCompanion companion) async {
+  Future<int> insertAuthor(AuthorCompanion companion) async {
     return into(author).insert(companion);
   }
 
-  Future<int> deleteEmployee(int id) async {
-    return (delete(author)..where((t) => t.id.equals(id))).go();
+  Future<int> deleteAuthor(int id) async {
+    return (delete(author)..where((tbl) => tbl.id.equals(id))).go();
   }
 }

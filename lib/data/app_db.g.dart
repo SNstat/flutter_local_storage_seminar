@@ -1135,6 +1135,8 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $BookTable book = $BookTable(this);
   late final $GenreTable genre = $GenreTable(this);
   late final $BookGenreTable bookGenre = $BookGenreTable(this);
+  late final AuthorDao authorDao = AuthorDao(this as AppDb);
+  late final BookDao bookDao = BookDao(this as AppDb);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

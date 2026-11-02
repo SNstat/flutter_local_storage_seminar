@@ -11,12 +11,15 @@ class BookDao extends DatabaseAccessor<AppDb> with _$BookDaoMixin {
   Stream<List<BookData>> watchBooks () =>
     select(book).watch();
 
+  Stream<List<BookData>> watchBooksByAuthorId (int authorId) =>
+    (select(book)..where((tbl) => tbl.authorId.equals(authorId))).watch();
+
   Future<List<BookData>> getBooks() async {
     return select(book).get(); 
   }
 
   Future<BookData?> getBookById(int id) async {
-    return (select(book)..where((t) => t.id.equals(id))).getSingleOrNull();
+    return (select(book)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
 
   Future<bool> updateBook(BookCompanion companion) async {
@@ -28,7 +31,7 @@ class BookDao extends DatabaseAccessor<AppDb> with _$BookDaoMixin {
   }
 
   Future<int> deleteBook(int id) async {
-    return (delete(book)..where((t) => t.id.equals(id))).go();
+    return (delete(book)..where((tbl) => tbl.id.equals(id))).go();
   }
 }
 

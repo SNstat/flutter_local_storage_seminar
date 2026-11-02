@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+lib/data/app_db.g.dart
+lib/data/daos/author_dao.g.dart
+lib/data/daos/book_dao.g.dart
