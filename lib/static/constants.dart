@@ -26,6 +26,12 @@ class ConstantStrings {
   static const String decoPCount = "Broj stranica";
   static const String decoLang = "Jezik";
 
+  //hive labels
+  static const String hiveAddEntry = "Dodaj u Hive kutiju";
+  static const String hiveKey = "Ključ:";
+  static const String hiveValue = "Vrijednost:";
+
+
   // misc
   static const String emptySelect = "Nema stavki za prikazati!";
   static const String addBookList = "Dodaj knjigu";

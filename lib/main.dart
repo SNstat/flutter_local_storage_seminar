@@ -7,8 +7,12 @@ import 'package:flutter_local_storage_seminar/screens/hive_screen.dart';
 import 'package:flutter_local_storage_seminar/static/screens.dart';
 import 'package:flutter_local_storage_seminar/static/constants.dart';
 import 'package:flutter_local_storage_seminar/static/theme.dart';
+import 'package:hive_ce_flutter/adapters.dart';
 
 void main() async {
+
+  await Hive.initFlutter();
+  await Hive.openBox('TestBox');
 
   final db = AppDb();
   await seedMockData(db);
