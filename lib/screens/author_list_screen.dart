@@ -1,61 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_storage_seminar/screens/details_screen.dart';
+import 'package:flutter_local_storage_seminar/static/constants.dart';
+import 'package:flutter_local_storage_seminar/static/theme.dart';
 import '../data/app_db.dart';
 
 class AuthorListScreen extends StatelessWidget {
   final AppDb db;
+  
   const AuthorListScreen({super.key, required this.db});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Library'), backgroundColor: Colors.blueAccent),
       body: StreamBuilder<List<AuthorData>>(
         stream: db.authorDao.watchAuthors(),
         builder: (context, snapshot) {
-          final authors = snapshot.data!;
-          if (authors.isEmpty) {
-            return const Center(child: Text('Empty library. Add more authors and books!'));
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text(ConstantStrings.emptySelect));
+          } else {
+            return ListView.builder(
+              itemCount: snapshot.data!.length,
+              itemBuilder: (context, index) => _AuthorExtensionTile(db: db, author: snapshot.data![index]),
+            );
           }
-
-          return ListView.builder(
-            itemCount: authors.length,
-            itemBuilder: (context, index) => _AuthorTile(db: db, author: authors[index]),
-          );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
-          context, 
-          MaterialPageRoute(builder: (_) => DetailsScreen(db: db))
+          context,
+          MaterialPageRoute(builder: (_) => DetailsScreen(db: db)),
         ),
-        child: const Icon(Icons.add),
+        child: const Icon(ConstantIcons.floatingAdd),
       ),
     );
   }
 }
 
-class _AuthorTile extends StatelessWidget {
+class _AuthorExtensionTile extends StatelessWidget {
   final AppDb db;
   final AuthorData author;
-  const _AuthorTile({required this.db, required this.author});
+
+  const _AuthorExtensionTile({required this.db, required this.author});
 
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
-      title: Text('Author: ${author.firstName} ${author.lastName}'),
-      subtitle: Text('Id: ${author.id}'),
+      title: Text('Autor ID: ${author.id}, ${author.firstName} ${author.lastName}'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(ConstantIcons.edit),
             onPressed: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => DetailsScreen(db: db, existingAuthor: author)
+              builder: (_) => DetailsScreen(db: db, author: author),
             )),
           ),
           IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
+            icon: const Icon(ConstantIcons.delete, color: ThemeColors.accent),
             onPressed: () => db.authorDao.deleteAuthor(author.id),
           ),
         ],
@@ -64,22 +65,23 @@ class _AuthorTile extends StatelessWidget {
         StreamBuilder<List<BookData>>(
           stream: db.bookDao.watchBooksByAuthorId(author.id),
           builder: (context, snapshot) {
-            if (!snapshot.hasData) return const LinearProgressIndicator();
-            final books = snapshot.data!;
+            if (!snapshot.hasData) {
+              return const Center(child: Text(ConstantStrings.emptySelect));
+            }
+            
             return Column(
               children: [
-                ...books.map((book) => ListTile(
+                ...snapshot.data!.map((book) => ListTile(
                   dense: true,
-                  leading: const Icon(Icons.notes, size: 20),
                   title: Text(book.title),
                   subtitle: Text('ID: ${book.id} | ${book.language.name}'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit, size: 20, color: Colors.blue),
+                        icon: const Icon(Icons.edit, size: 20),
                         onPressed: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => DetailsScreen(db: db, existingBook: book)
+                          builder: (_) => DetailsScreen(db: db, book: book),
                         )),
                       ),
                       IconButton(
@@ -89,12 +91,11 @@ class _AuthorTile extends StatelessWidget {
                     ],
                   ),
                 )),
-                TextButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add book'),
+                TextButton(
                   onPressed: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => DetailsScreen(db: db, fixedAuthorId: author.id)
+                    builder: (_) => DetailsScreen(db: db, authorId: author.id),
                   )),
+                  child: const Text(ConstantStrings.addBookList),
                 ),
               ],
             );

@@ -1,163 +1,169 @@
 import 'package:flutter/material.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter_local_storage_seminar/static/constants.dart';
 import 'package:intl/intl.dart';
 import '../data/app_db.dart';
 import '../data/entities/book.dart';
 
 class DetailsScreen extends StatefulWidget {
   final AppDb db;
-  final AuthorData? existingAuthor;
-  final BookData? existingBook;
-  final int? fixedAuthorId;
+  final AuthorData? author;
+  final BookData? book;
+  final int? authorId;
 
   const DetailsScreen({
     super.key,
     required this.db,
-    this.existingAuthor,
-    this.existingBook,
-    this.fixedAuthorId
+    this.author,
+    this.book,
+    this.authorId,
   });
 
   @override
-  State<DetailsScreen> createState() => _FormScreenState();
+  State<DetailsScreen> createState() => _DetailsScreenState();
 }
 
-class _FormScreenState extends State<DetailsScreen> {
-  late TextEditingController _firstNameControler;
-  late TextEditingController _lastNameControler;
-  
-  late TextEditingController _titleControler;
-  late TextEditingController _descriptionControler;
-  late TextEditingController _pageCountControler;
-  DateTime _selectedDate = DateTime.now();
-  Language _selectedLanguage = Language.english;
+class _DetailsScreenState extends State<DetailsScreen> {
+  late final TextEditingController
+    _firstNameController,
+    _lastNameController,
+    _titleController,
+    _descriptionController,
+    _pagesCountController;
 
-  bool get isAuthorForm => widget.existingAuthor != null || widget.existingBook == null && widget.fixedAuthorId == null;
-  bool get isEditing => widget.existingAuthor != null || widget.existingBook != null;
+  DateTime _datetimePicker = DateTime.now();
+  Language _languagePicker = Language.hrvatski;
+
+  bool get addingAuthorMode =>
+    widget.book == null && widget.authorId == null;
+
+  bool get editingMode =>
+    widget.author != null || widget.book != null;
 
   @override
   void initState() {
     super.initState();
-    _firstNameControler = TextEditingController(text: widget.existingAuthor?.firstName ?? '');
-    _lastNameControler = TextEditingController(text: widget.existingAuthor?.lastName ?? '');
-    
-    _titleControler = TextEditingController(text: widget.existingBook?.title ?? '');
-    _descriptionControler = TextEditingController(text: widget.existingBook?.description ?? '');
-    _pageCountControler = TextEditingController(text: widget.existingBook?.pageCount.toString() ?? '100');
-    
-    if (widget.existingBook != null) {
-      _selectedDate = widget.existingBook!.publishingDate;
-      _selectedLanguage = widget.existingBook!.language;
+    _firstNameController = TextEditingController(text: widget.author?.firstName ?? '');
+    _lastNameController  = TextEditingController(text: widget.author?.lastName ?? '');
+    _titleController = TextEditingController(text: widget.book?.title ?? '');
+    _descriptionController  = TextEditingController(text: widget.book?.description ?? '');
+    _pagesCountController = TextEditingController(text: widget.book?.pageCount.toString() ?? '0');
+
+    if (widget.book != null) {
+      _datetimePicker = widget.book!.publishingDate;
+      _languagePicker = widget.book!.language;
     }
+  }
+
+  Future<void> _save() async {
+    if (addingAuthorMode) {
+      AuthorCompanion companion;
+
+      if (widget.author == null) {
+        companion = AuthorCompanion(
+          firstName: Value(_firstNameController.text),
+          lastName: Value(_lastNameController.text));
+        await widget.db.authorDao.insertAuthor(companion);
+      } else {
+        companion = AuthorCompanion(
+          id: Value(widget.author!.id),
+          firstName: Value(_firstNameController.text),
+          lastName: Value(_lastNameController.text));
+        await widget.db.authorDao.updateAuthor(companion);
+      }
+    } else {
+      BookCompanion companion;
+
+      if (widget.book == null) {
+        companion = BookCompanion(
+              title: Value(_titleController.text),
+              description: Value(_descriptionController.text),
+              pageCount: Value(int.parse(_pagesCountController.text)),
+              publishingDate: Value(_datetimePicker),
+              language: Value(_languagePicker),
+              authorId: Value(widget.authorId!),
+            );
+        await widget.db.bookDao.insertBook(companion);
+      } else {
+        companion = BookCompanion(
+              id: Value(widget.book!.id),
+              title: Value(_titleController.text),
+              description: Value(_descriptionController.text),
+              pageCount: Value(int.parse(_pagesCountController.text)),
+              publishingDate: Value(_datetimePicker),
+              language: Value(_languagePicker),
+              authorId: Value(widget.book!.authorId),
+            );
+        await widget.db.bookDao.updateBook(companion);
+      }
+  }
+  if (mounted) Navigator.pop(context);
   }
 
   @override
   void dispose() {
-    _firstNameControler.dispose();
-    _lastNameControler.dispose();
-    _titleControler.dispose();
-    _descriptionControler.dispose();
-    _pageCountControler.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _pagesCountController.dispose();
     super.dispose();
   }
 
-  Future<void> _save() async {
-    if (isAuthorForm) {
-      if (_firstNameControler.text.isEmpty) return;
-      if (isEditing) {
-        await widget.db.authorDao.updateAuthor(AuthorCompanion(
-          id: Value(widget.existingAuthor!.id),
-          firstName: Value(_firstNameControler.text),
-          lastName: Value(_lastNameControler.text),
-        ));
-      } else {
-        await widget.db.authorDao.insertAuthor(AuthorCompanion.insert(
-          firstName: _firstNameControler.text,
-          lastName: _lastNameControler.text,
-        ));
-      }
-    } else {
-      if (_titleControler.text.isEmpty) return;
-      final pageCount = int.tryParse(_pageCountControler.text) ?? 1;
-      
-      if (isEditing) {
-        await widget.db.bookDao.updateBook(BookCompanion(
-          id: Value(widget.existingBook!.id),
-          title: Value(_titleControler.text),
-          description: Value(_descriptionControler.text),
-          pageCount: Value(pageCount),
-          publishingDate: Value(_selectedDate),
-          language: Value(_selectedLanguage),
-        ));
-      } else {
-        await widget.db.bookDao.insertBook(BookCompanion.insert(
-          title: _titleControler.text,
-          description: _descriptionControler.text,
-          pageCount: pageCount,
-          publishingDate: _selectedDate,
-          language: _selectedLanguage,
-          authorId: widget.fixedAuthorId!,
-        ));
-      }
-    }
-    if (mounted) Navigator.pop(context);
+  String get _appBarTitle {
+  if (addingAuthorMode) {
+    return editingMode ? ConstantStrings.editAuthor : ConstantStrings.addAuthor;
+  } else {
+    return editingMode ? ConstantStrings.editBook : ConstantStrings.addBook;
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isAuthorForm 
-            ? (isEditing ? 'Edit Author' : 'Add Author') 
-            : (isEditing ? 'Edit Book' : 'Add Book')),
-      ),
+        title: Text(_appBarTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: isAuthorForm ? _buildAuthorFields() : _buildBookFields(),
+        children: addingAuthorMode ? _authorInputControllers() : _bookInputControllers(),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _save,
-        label: const Text('Save'),
-      ),
+      floatingActionButton: FloatingActionButton(onPressed: _save, child: const Icon(ConstantIcons.floatingSave)),
     );
   }
 
-  List<Widget> _buildAuthorFields() {
-    return [
-      TextField(controller: _firstNameControler, decoration: const InputDecoration(labelText: 'First Name')),
-      const SizedBox(height: 12),
-      TextField(controller: _lastNameControler, decoration: const InputDecoration(labelText: 'Last Name')),
-    ];
-  }
+  List<Widget> _authorInputControllers() => [
+    TextField(
+      controller: _firstNameController,
+      decoration: const InputDecoration(labelText: ConstantStrings.decoFirst)),
+    TextField(
+      controller: _lastNameController,
+      decoration: const InputDecoration(labelText: ConstantStrings.decoLast)),
+  ];
 
-  List<Widget> _buildBookFields() {
-
-    final dateFormat = DateFormat('dd.MM.yyyy.');
-
-    return [
-      TextField(controller: _titleControler, decoration: const InputDecoration(labelText: 'Title')),
-      const SizedBox(height: 12),
-      TextField(controller: _descriptionControler, decoration: const InputDecoration(labelText: 'Description')),
-      const SizedBox(height: 12),
-      TextField(controller: _pageCountControler, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Page Count')),
-      const SizedBox(height: 12),
-      DropdownButtonFormField<Language>(
-        initialValue: _selectedLanguage,
-        decoration: const InputDecoration(labelText: 'Language'),
-        items: Language.values.map((l) => DropdownMenuItem(value: l, child: Text(l.name.toUpperCase()))).toList(),
-        onChanged: (val) => setState(() => _selectedLanguage = val!),
-      ),
-      const SizedBox(height: 12),
-      ListTile(
-        title: Text('Published: ${dateFormat.format(_selectedDate)}'),
-        trailing: const Icon(Icons.calendar_month),
-        onTap: () async {
-          final picked = await showDatePicker(
-            context: context, initialDate: _selectedDate, firstDate: DateTime(1900), lastDate: DateTime(2100),
-          );
-          if (picked != null) setState(() => _selectedDate = picked);
-        },
-      ),
-    ];
-  }
+  List<Widget> _bookInputControllers() => [
+    TextField(
+      controller: _titleController,
+      decoration: const InputDecoration(labelText: ConstantStrings.decoTitle)),
+    TextField(
+      controller: _descriptionController,
+      decoration: const InputDecoration(labelText: ConstantStrings.decoDesc)),
+    TextField(
+      controller: _pagesCountController,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(labelText: ConstantStrings.decoPCount)),
+    DropdownButtonFormField<Language>(
+      initialValue: _languagePicker,
+      decoration: const InputDecoration(labelText: ConstantStrings.decoLang),
+      items: Language.values.map((lang) => DropdownMenuItem(value: lang, child: Text(lang.name))).toList(),
+      onChanged: (newValue) => setState(() => _languagePicker = newValue!),
+    ),
+    ListTile(
+      title: Text('Izdano na datum: ${DateFormat('dd.MM.yyyy.').format(_datetimePicker)}'),
+      trailing: const Icon(Icons.calendar_month),
+      onTap: () async {
+        final p = await showDatePicker(context: context, initialDate: _datetimePicker, firstDate: DateTime(-1000), lastDate: DateTime(2050));
+        if (p != null) setState(() => _datetimePicker = p);
+      },
+    ),
+  ];
 }
