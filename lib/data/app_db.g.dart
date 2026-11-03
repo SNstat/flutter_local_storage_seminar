@@ -300,7 +300,9 @@ class $BookTable extends Book with TableInfo<$BookTable, BookData> {
     'page_count',
     aliasedName,
     false,
-    check: () => ComparableExpr(pageCount).isBiggerThanValue(0),
+    check: () =>
+        ComparableExpr(CustomExpression<int>('page_count'))
+            .isBiggerThanValue(0),
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
