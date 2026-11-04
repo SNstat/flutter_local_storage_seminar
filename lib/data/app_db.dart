@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_local_storage_seminar/data/daos/author_dao.dart';
 import 'package:flutter_local_storage_seminar/data/daos/book_dao.dart';
+import 'package:flutter_local_storage_seminar/data/data_seeder.dart';
 import 'package:flutter_local_storage_seminar/data/entities/author.dart';
 import 'package:flutter_local_storage_seminar/data/entities/book.dart';
 import 'package:flutter_local_storage_seminar/data/entities/book_genre.dart';
@@ -43,5 +44,8 @@ class AppDb extends _$AppDb {
         await m.createAll();
       }
     },
+    beforeOpen:(details) async {
+      await seedMockData(this);
+    }
   );
 }

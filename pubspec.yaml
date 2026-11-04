@@ -1,5 +1,7 @@
 name: flutter_local_storage_seminar
-description: "A new Flutter project."
+description: >
+  Seminarski rad na temu flutter
+  mehanizama za lokalnu pohranu
 publish_to: 'none'
 version: 0.1.0+1
 

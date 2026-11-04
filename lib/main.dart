@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_storage_seminar/data/app_db.dart';
-import 'package:flutter_local_storage_seminar/data/data_seeder.dart';
 import 'package:flutter_local_storage_seminar/screens/author_list_screen.dart';
 import 'package:flutter_local_storage_seminar/screens/cross_join_screen.dart';
 import 'package:flutter_local_storage_seminar/screens/hive_screen.dart';
@@ -15,7 +14,6 @@ void main() async {
   await Hive.openBox('TestBox');
 
   final db = AppDb();
-  await seedMockData(db);
 
   runApp(MaterialApp(
     theme: ThemeData(colorSchemeSeed: ThemeColors.primary, useMaterial3: true),
