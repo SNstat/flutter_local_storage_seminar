@@ -10,21 +10,19 @@ Future<void> seedMockData(AppDb db) async {
     AuthorCompanion.insert(
       firstName: 'J.R.R.',
       lastName: 'Tolkien'
-      ),
-  );
+  ));
 
   final zoranicId = await db.authorDao.insertAuthor(
     AuthorCompanion.insert(
       firstName: 'Petar',
       lastName: 'Zoranić'
-      ),
-  );
+  ));
 
   final vergilijeId = await db.authorDao.insertAuthor(
     AuthorCompanion.insert(
       firstName: 'Publije',
-      lastName: 'Vergilije Maron'),
-  );
+      lastName: 'Vergilije Maron'
+  ));
 
   await db.bookDao.insertBook(BookCompanion.insert(
     title: 'Hobbit',
