@@ -96,7 +96,7 @@ flutter:
 Normalizacija je proces organizacije podataka u bazi kako bi se smanjilo ponavljanje (redundancija) i poboljšao integritet podataka.
 
 | Normalna forma | Definicija |
-|||
+| --- | --- |
 | **1NF** | Svaki stupac sadrži atomske (nedjeljive) vrijednosti. Nema ponavljajućih grupa podataka. |
 | **2NF** | Zadovoljava 1NF i svi neključni atributi ovise o cijelom primarnom ključu (nema djelomične ovisnosti). |
 | **3NF** | Zadovoljava 2NF i nema tranzitivnih ovisnosti (neključni atributi ne ovise o drugim neključnim atributima). |
