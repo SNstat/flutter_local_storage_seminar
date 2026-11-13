@@ -1,5 +1,11 @@
 # Korištenje lokalne baze podataka i drugih mehanizama pohrane podataka u Flutter-u
 
+Ovaj README predstavlja tutorial za Flutter projekt koji prolazi kroz lokalnu pohranu u Flutteru s pomoću SQLite i Drift ORM-a te izoliranu pohranu s pomoću Hive_ce.
+
+**Preduvjeti:** osnovno poznavanje Fluttera i načina rada relacijskih baza
+
+---
+
 **Autor:** Šimun Ćosić
 
 **Kolegij:** Razvoj aplikacija za mobilne i pametne uređaje
@@ -12,7 +18,7 @@
 4. CRUD operacije
 5. Spajanja
 6. Verzioniranje i migracija baze
-7. Izolirana pohrana (hive_ce)
+7. Izolirana pohrana i Hive_ce
 
 ## 1. Uvod u lokalnu pohranu
 
@@ -42,7 +48,10 @@
 **Object Relational Mapping (ORM)** je tehnika koja povezuje objekte s tablicama u relacijskoj bazi.
 
 - Piše se u namjenskom programskom jeziku umjesto u sirovom SQL-u.
-- Pristupi: *Database-first*, *Model-first* i *Code-first*.
+- Pristupi:
+  - *Database-first* - prvo postoji baza te se klase generiraju na temelju nje
+  - *Model-first* - prvo se izrađuje model u predviđenom programu te na temelju njega generiraju klase
+  - *Code-first* - prvo se pišu klase u kodu te se baza generira na temelju njih
 - Jedan od najpopularnijih ORM-ova za Flutter je **Drift**.
 
 ![Dijagram ORM-a](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/orm.png)
@@ -54,6 +63,7 @@ Drift je ORM otvorenog koda koji predstavlja sloj apstrakcije nad SQLite bazom p
 - Osnovne klase: **tablice**, **DAO** i **baza podataka**
 - Podržava reaktivno osvježavanje korisničkog sučelja (`Stream<T>` i `watch`)
 - Zavisni paketi: `drift`, `drift_flutter`, `path_provider`, `drift_dev`, `build_runner`
+- Omogućuje da se tablice opisuju Dart klasama, a upiti pišu Dart kodom umjesto sa SQL-om.
 
 ### 3.1 Postavljanje projekta
 
@@ -91,6 +101,10 @@ flutter:
   uses-material-design: true
 ```
 
+`drift` i `drift_flutter` su sam ORM, `path_provider` i `path` služe za pronalazak direktorija i spajanje putanje do datoteke baze, a `intl` za formatiranje datuma. `drift_dev` i `build_runner` generiraju kod te su potrebni samo tijekom razvoja.
+
+Za postavljanje paketa je potrebno psotaviti pakete u `pubspec.yaml` i pokrenuti naredbu `flutter pub get`.
+
 ### 3.2 Normalizacija
 
 Normalizacija je proces organizacije podataka u bazi kako bi se smanjilo ponavljanje (redundancija) i poboljšao integritet podataka.
@@ -101,13 +115,13 @@ Normalizacija je proces organizacije podataka u bazi kako bi se smanjilo ponavlj
 | **2NF** | Zadovoljava 1NF i svi neključni atributi ovise o cijelom primarnom ključu (nema djelomične ovisnosti). |
 | **3NF** | Zadovoljava 2NF i nema tranzitivnih ovisnosti (neključni atributi ne ovise o drugim neključnim atributima). |
 
-Primjer: tablica **Book** je sadržavala atribute **author_first_name** i **author_last_name**. Normalizacijom se oni izdvajaju u zasebnu tablicu `Author`, a `Book` na nju upućuje vanjskim ključem `author_id`.
+Primjer: tablica `Book` je sadržavala atribute `author_first_name` i `author_last_name`. Normalizacijom se oni izdvajaju u zasebnu tablicu `Author`, a `Book` na nju upućuje vanjskim ključem `author_id`. Pokriva 1NF zato jer nema popisa vrijednosti u jednoj ćeliji, 2NF zato jer svaki stupac ovisi o cijelom ključu i 3NF zato jer stupci ne ovise o nekom neključnom stupcu.
 
-Entitet **Book** koji nije normaliziran jer sadržava podatke o autoru koji nisu jedinstveni za njega:
+Entitet `Book` koji nije normaliziran jer sadržava podatke o autoru koji nisu jedinstveni za njega:
 
 ![Denormalizirani ERA model](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/DenarmaliziraniERA.png)
 
-Normalizirani entitet **Book** na entitet **Autor** koristeći normalne forme:
+Normalizirani entitet `Book` na entitet `Autor` koristeći normalne forme:
 
 ![Normalizirani ERA model](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/NormaliziraniERA.png)
 
@@ -115,8 +129,16 @@ Normalizirani entitet **Book** na entitet **Autor** koristeći normalne forme:
 
 - Svaka tablica u Driftu se definira kao klasa koja nasljeđuje Drift klasu `Table`.
 - Potrebno je postaviti `getter` koji vraća odgovarajući tip.
-- Ulančavanje svojstva stupca: `.autoIncrement()`, `.check()`, `.unique()`, `.nullable()`...
-- Specifičnost Drifta: `()()`
+- Ulančavanje svojstva stupca:
+  - `.autoIncrement()` - postavlja stupac da automatski povećava vrijednost za 1
+  - `.check()` - postavlja uvjet koji vrijednost mora zadovoljiti (ovdje postavlja da broj stranica mora biti veći od 0)
+  - `.unique()` - zabranjuje duplikate u stupcu
+  - `.nullable()` - omogućuje da vrijednost bude `null`
+  - `.named()` - eksplicitno postavlja naziv stupca, iako će on automatski postaviti naziv stupca u bazi na **snake case** (primjer. firstName -> first_name)
+  - ...
+- Specifičnost Drifta je završetak definicije stupaca s `()()`, na kraju se dodaje dodatni `()` tako da se označi da je kraj definicije tog stupca.
+- `textEnum<T>()` sprema Dart enumeraciju kao tekst u bazu, `intEnum<T>()` kao broj
+- Iz klase `Author` generiraju se objekti `AuthorData` (predstavlja jedan redak iz baze) i `AuthorCompanion` (predstavlja redak koji omogućuje unos ili izmjenu).
 
 **author.dart**
 
@@ -154,6 +176,8 @@ class Book extends Table {
 }
 ```
 
+S pomoću `.references(tablica, stupac_ključa, ponašanje_u_slučaju_brisanja)` se može definirati veza odnosno vanjski ključ na drugu tablicu.
+
 ### 3.4 Slabi entiteti
 
 - Entiteti čiji primarni ključ je sastavljen od vanjskih ključeva drugih entiteta (`book_id`, `genre_id`).
@@ -162,6 +186,8 @@ class Book extends Table {
 ![Slabi entiteti](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/SlabiEntitetiERA.png)
 
 ### 3.5 Definicija slabih entiteta
+
+Za vezu više-na-više (m:n) je potrebna spojna tablica. Njezin primarni ključ je par `{bookId, genreId}`. Složeni primarni ključ se definira nadjačavanjem gettera `primaryKey`. Zbog `onDelete: cascade` brisanjem knjige ili žanra brišu se i njihove veze u `BookGenre`.
 
 **genre.dart**
 
@@ -199,6 +225,8 @@ class BookGenre extends Table {
 - Definira se s ključnom riječi `part`.
 - U generiranoj datoteci postoji povratna veza s `part of`.
 - Originalna datoteka referencira generirane objekte.
+- Nakon svake promjene tablica je potrebno ih ponovno generirati.
+- Generirane datoteke `.g.dart` se nikad ručno ne uređuju
 - Generiraju se s pomoću naredbi:
 
 ```bash
@@ -217,7 +245,7 @@ with _$AuthorDaoMixin {
   AuthorDao(super.db);
 ```
 
-**author_dao.g.dart** (generirano, ne mijenjati ručno)
+**author_dao.g.dart**
 
 ```dart
 // GENERATED CODE - DO NOT MODIFY BY HAND
@@ -237,6 +265,8 @@ class AuthorDaoManager {
       $$AuthorTableTableManager(_db.attachedDatabase, _db.author);
 }
 ```
+
+`part` i `part of` povezuju originalnu i generiranu datoteku u jednu cjelinu. `_$AuthorDaoMixin` je generirani objekt koji DAO-u daje pristup tablici `author`. `build` generira kod jednom, a `watch` ga ponovno generira pri svakoj promjeni.
 
 ### 3.7 Definicija baze podataka
 
@@ -280,6 +310,10 @@ class AppDb extends _$AppDb {
   int get schemaVersion => 1;
 }
 ```
+
+`LazyDatabase` otvara bazu tek pri prvom upitu, a `getApplicationDocumentsDirectory()` radi Androidu, iOS i Windowsu jer se povezuje na zadani direktorij za dokumente (primjer. na Windowsu je to **Documents** direktorij).
+
+`@DriftDatabase(tables: ..., daos: ...)` govori Driftu koje tablice i DAO sadržava. `NativeDatabase()` otvara SQLite datoteku na disku, a `path.join` spaja direktorij i naziv datoteke neovisno o platformi. `schemaVersion` je verzija sheme baze (više u odjeljku za verzioniranje).**
 
 ### 3.8 Data Access Object (DAO)
 
@@ -328,10 +362,23 @@ class AuthorDao extends DatabaseAccessor<AppDb> with _$AuthorDaoMixin {
 }
 ```
 
+Widget poziva metodu AuthorDAO klase i ne zna kako se podaci dohvaćaju. `watch()` vraća `Stream`, a `get()` vraća `Future`.
+
+Specifične naredbe i operandi:
+- `select(author)` započinje upit nad tablicom
+- `..where(...)` dodaje uvjet
+- `.get()` vraća rezultat kao `Future<AuthorData>`
+- `.getSingle()` točno jedan redak
+- `.watch()` reaktivni tok (`Stream`)
+- `into(author).insert()` unosi redak u tablicu `Author` i vraća primarni ključ novog retka u tablici
+- `update(author).replace()` ažurira redak u tablici `Author` i vraća je li nađen traženi redak u tablici
+- `delete(author).go()` briše retke iz tablice `Author` i vraća broj redaka koji su izbrisani
+
 ### 3.9 Inicijalizacija baze podataka
 
 - Kreira se nova instanca klase `AppDb` u `main()` funkciji prije pokretanja aplikacije.
 - Instanca baze se prosljeđuje kroz aplikaciju kao argument konstruktora (*constructor injection*).
+- `seedMockData(db)` unosi probne podatke prije prikaza aplikacije
 
 **main.dart**
 
@@ -368,6 +415,7 @@ class AuthorListScreen extends StatelessWidget {
 - Prosljeđuju se vrijednosti iz polja za unos u funkciju `insertAuthor()`.
 - Inicijalizira se novi `AuthorCompanion` s obaveznim atributima: `firstName` i `lastName`.
 - `.insert()` vraća ID novokreiranog zapisa u bazi podataka.
+- koristi se `Value` zato jer se time `AuthorCompanion` objektu naznačuje da je postavljena ta vrijednost, a s druge strane se može koristiti i `Value.absent()` kako bi se naznačilo da nije postavljena određena vrijednost kao na primjer **id** kojeg baza sama kreira
 
 **author_dao.dart** (metoda za unos autora)
 
@@ -395,7 +443,8 @@ Future<void> _save() async {
 ### 4.2. Read
 
 - `StreamBuilder` prima `Stream<List<AuthorData>>`.
-- Metoda `.watch()` omogućuje automatsko osvježavanje sadržaja sučelja prilikom promjene podataka u bazi.
+- Metoda `.watch()` omogućuje automatsko osvježavanje sadržaja sučelja prilikom promjene podataka u bazi
+- `snapshot` sadrži najnoviji popis iz toka te kad u njemu nema podataka se prikazuje poruka, a kad ima onda ih `ListView.builder` prikazuje 
 
 **author_dao.dart** (metode za dohvat podataka)
 
@@ -435,6 +484,7 @@ body: StreamBuilder<List<AuthorData>>(
 - Prosljeđuju se vrijednosti iz polja za unos u funkciju `updateAuthor()`.
 - Inicijalizira se `AuthorCompanion` u koji obavezno postavljamo `id` i nove vrijednosti za `firstName` i `lastName`.
 - Metoda `.replace()` vraća `bool` koji označava je li uspješno ažuriran redak u bazi.
+- `id` je obavezan jer `.replace()` po njemu traži redak.
 
 **author_dao.dart** (metoda za ažuriranje autora)
 
@@ -466,6 +516,7 @@ Future<void> _save() async {
 
 - Prosljeđuje se samo `id` autora u funkciju `deleteAuthor()`.
 - Metoda `.go()` izvršava brisanje i vraća cijeli broj koji označava broj izbrisanih redaka.
+- bez `where` brišu se svi retci iz tablice
 
 **author_dao.dart** (metoda za brisanje autora)
 
@@ -591,9 +642,9 @@ the migrations getter in your database class.)
 
 Za ispravno verzioniranje je potrebno odrediti migraciju (`MigrationStrategy`). Tri ključna callback-a:
 
-- `onCreate` - baza ne postoji
-- `onUpgrade` - promijeni se verzija
-- `beforeOpen` - nakon migracije, ali prije nego što je baza dostupna
+- `onCreate` se poziva kada baza ne postoji
+- `onUpgrade` se poziva kada se promijeni verzija
+- `beforeOpen` se poziva nakon migracije, ali prije nego što je baza dostupna
 
 **app_db.dart**
 
@@ -627,7 +678,13 @@ class AppDb extends _$AppDb {
 }
 ```
 
+`m` je objekt `Migrator` koji izvodi promjene sheme te sadrži nekoliko asinkronih metoda:
+- `createAll()` stvara sve tablice
+- `createTable(tablica)` stvara jednu tablicu na temelju objekta tablice
+- `deleteTable(ime tablice)` briše jednu tablicu na temelju imena tablice
+- `from` i `to` predstavljaju staru i novu verzija baze
 
+U primjeru, ako je baza bila verzije 1, dodaju se samo nove tablice i postojeći podaci ostaju sačuvani. U suprotnom se sve tablice brišu (`allTables` je popis svih tablica, `actualTableName` njihov naziv u SQL-u) te na kraju i ponovno stvaraju s pomoću metode `createAll()`. Nadalje, `beforeOpen` se izvršava pri svakom otvaranju baze te se zbog toga izvršava u njemu proivoljno definirana funkcija za unos početnih podataka `seeMockData(this)` gdje `this` predstavlja trenutnu konekciju na bazu.**
 
 ## 7. Izolirana pohrana (hive_ce)
 
@@ -635,16 +692,56 @@ Izolirana pohrana je način spremanja podataka gdje se podaci čuvaju u neovisni
 
 Tehnologije u Flutteru:
 
-- `shared_preferences` (osnovne postavke)
-- `flutter_secure_storage` (osjetljivi podaci poput lozinki i tokena)
-- `hive_ce` - Hive Community Edition (otvoren kod, jednostavnost)
+- `shared_preferences` - koristi se za pohranjivanje postavki
+- `flutter_secure_storage` - koristi se za pohranjivanje osjetljivih podataka poput lozinki i tokena
+- `hive_ce` ili Hive Community Edition - mehanizam izolirane pohrane otvorenog koda
 
-### hive_ce
+### Postavljanje hive_ce
 
-- Inicijalizacija kutije u `main.dart` pomoću klase `Hive`.
-- Pristup kutiji se omogućuje s `Hive.box(naziv)`.
-- `.put(ključ, vrijednost)`: dodavanje i ažuriranje
-- `.delete(ključ)`: brisanje
+**pubspec.yaml**
+
+```yaml
+name: flutter_local_storage_seminar
+description: >
+  Seminarski rad na temu flutter
+  mehanizama za lokalnu pohranu
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  drift: ^2.35.2
+  drift_flutter: ^0.3.1
+  flutter:
+    sdk: flutter
+  hive_ce: ^2.22.0
+  hive_ce_flutter: ^2.5.0
+  intl: ^0.20.3
+  path: ^1.9.0
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  
+  drift_dev: ^2.35.2
+  build_runner: ^2.17.1
+
+flutter:
+  uses-material-design: true
+```
+
+Potrebno je dodati pakete `hive_ce` i `hive_ce_flutter` unutar `pubspec.yaml`.  Kako bi se paketi preuzeli, potrebno je pokrenuti naredbu `flutter pub get`.
+
+### Korištenje hive_ce 
+
+- Inicijalizacija kutije u `main.dart` s pomoću klase `Hive`.
+- Pristup već otvorenoj kutiji se omogućuje s `Hive.box(naziv)`.
+- `.put(ključ, vrijednost)` se koristi za dodavanje i ažuriranje
+- `.delete(ključ)` se koristi za brisanje
 
 **main.dart**
 
@@ -687,9 +784,23 @@ class _HiveScreenState extends State<HiveScreen> {
   }
 ```
 
+Nakon `put` i `delete` se poziva `setState(() {})` da se promjena prikaže i u sučelju, a ne samo u kutiji.
+
 **Zaslon koji koristi Hive_ce za pohranjivanje parova ključ-vrijednost**
 
 ![Hive sučelje](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/HiveUI.png)
+
+## Kako pokrenuti primjer
+
+**Preduvjeti:** postavljen SDK i radno okruženje za pokretanje Fluttera
+
+```bash
+git clone https://github.com/SNstat/flutter_local_storage_seminar
+cd flutter_local_storage_seminar
+flutter pub get
+dart run build_runner build
+flutter run
+```
 
 ## Literatura
 
