@@ -1,14 +1,25 @@
 # Korištenje lokalne baze podataka i drugih mehanizama pohrane podataka u Flutter-u
 
+**Autor:** Šimun Ćosić
+
+---
+
 Ovaj README predstavlja tutorial za Flutter projekt koji prolazi kroz lokalnu pohranu u Flutteru s pomoću SQLite i Drift ORM-a te izoliranu pohranu s pomoću Hive_ce.
 
 **Preduvjeti:** osnovno poznavanje Fluttera i načina rada relacijskih baza
 
----
 
-**Autor:** Šimun Ćosić
+## Kako pokrenuti projekt?
 
-**Kolegij:** Razvoj aplikacija za mobilne i pametne uređaje
+**Preduvjeti:** postavljen SDK i radno okruženje za pokretanje Fluttera
+
+```bash
+git clone https://github.com/SNstat/flutter_local_storage_seminar
+cd flutter_local_storage_seminar
+flutter pub get
+dart run build_runner build
+flutter run
+```
 
 ## Sadržaj
 
@@ -790,17 +801,6 @@ Nakon `put` i `delete` se poziva `setState(() {})` da se promjena prikaže i u s
 
 ![Hive sučelje](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/HiveUI.png)
 
-## Kako pokrenuti primjer
-
-**Preduvjeti:** postavljen SDK i radno okruženje za pokretanje Fluttera
-
-```bash
-git clone https://github.com/SNstat/flutter_local_storage_seminar
-cd flutter_local_storage_seminar
-flutter pub get
-dart run build_runner build
-flutter run
-```
 
 ## Literatura
 
