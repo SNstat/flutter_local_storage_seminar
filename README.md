@@ -114,7 +114,7 @@ flutter:
 
 `drift` i `drift_flutter` su sam ORM, `path_provider` i `path` služe za pronalazak direktorija i spajanje putanje do datoteke baze, a `intl` za formatiranje datuma. `drift_dev` i `build_runner` generiraju kod te su potrebni samo tijekom razvoja.
 
-Za postavljanje paketa je potrebno psotaviti pakete u `pubspec.yaml` i pokrenuti naredbu `flutter pub get`.
+Za postavljanje paketa je potrebno postaviti pakete u `pubspec.yaml` i pokrenuti naredbu `flutter pub get`.
 
 ### 3.2 Normalizacija
 
@@ -148,7 +148,8 @@ Normalizirani entitet `Book` na entitet `Autor` koristeći normalne forme:
   - `.named()` - eksplicitno postavlja naziv stupca, iako će on automatski postaviti naziv stupca u bazi na **snake case** (primjer. firstName -> first_name)
   - ...
 - Specifičnost Drifta je završetak definicije stupaca s `()()`, na kraju se dodaje dodatni `()` tako da se označi da je kraj definicije tog stupca.
-- `textEnum<T>()` sprema Dart enumeraciju kao tekst u bazu, `intEnum<T>()` kao broj
+- Stupac `id` se zbog naziva automatski u Driftu postavlja kao primarni ključ te se drugdje može nadjačati `primaryKey`.
+- `textEnum<T>()` sprema Dart enumeraciju kao tekst u bazu, a `intEnum<T>()` kao broj.
 - Iz klase `Author` generiraju se objekti `AuthorData` (predstavlja jedan redak iz baze) i `AuthorCompanion` (predstavlja redak koji omogućuje unos ili izmjenu).
 
 **author.dart**
@@ -187,7 +188,7 @@ class Book extends Table {
 }
 ```
 
-S pomoću `.references(tablica, stupac_ključa, ponašanje_u_slučaju_brisanja)` se može definirati veza odnosno vanjski ključ na drugu tablicu.
+S pomoću `.references(tablica, stupac_ključa, ponašanje)` se može definirati veza odnosno vanjski ključ na drugu tablicu. Može se postaviti ponašanje u slučaju brisanja, kao na primjer: `onDelete: KeyAction.cascade` (briše se zavisna tablica) ili `onDelete: KeyAction.restrict` (ne briše se zavisna tablica).
 
 ### 3.4 Slabi entiteti
 
@@ -233,11 +234,12 @@ class BookGenre extends Table {
 
 ### 3.6 Generirane datoteke
 
-- Definira se s ključnom riječi `part`.
+- Definira se s ključnom riječi `part` te putanjom i nazivom generirane datoteke.
+- Po konvenciji se genriranim datotekama dodaje `.g`, kao u primjeru `author_dao.dart` -> `author_dao.g.dart`.
 - U generiranoj datoteci postoji povratna veza s `part of`.
-- Originalna datoteka referencira generirane objekte.
-- Nakon svake promjene tablica je potrebno ih ponovno generirati.
-- Generirane datoteke `.g.dart` se nikad ručno ne uređuju
+- `part` i `part of` povezuju originalnu i generiranu datoteku u jednu cjelinu. 
+- Nakon svake promjene tablica, potrebno ih je ponovno generirati.
+- Generirane datoteke se nikad ručno ne uređuju.
 - Generiraju se s pomoću naredbi:
 
 ```bash
@@ -277,13 +279,13 @@ class AuthorDaoManager {
 }
 ```
 
-`part` i `part of` povezuju originalnu i generiranu datoteku u jednu cjelinu. `_$AuthorDaoMixin` je generirani objekt koji DAO-u daje pristup tablici `author`. `build` generira kod jednom, a `watch` ga ponovno generira pri svakoj promjeni.
+`_$AuthorDaoMixin` je generirani objekt koji DAO-u daje pristup tablici `author`. `build` generira kod jednom, a `watch` ga ponovno generira pri svakoj promjeni.
 
 ### 3.7 Definicija baze podataka
 
 - Koristi anotaciju `@DriftDatabase`.
 - Ključni atributi: `tables` i `daos`.
-- Referencira klase entiteta (`Table`) i definiranih metoda pristupa (DAO).
+- Referencira klase entiteta (**Table**) i definiranih metoda pristupa (**DAO**).
 - Privatna metoda `_openConnection()` koristi `getApplicationDocumentsDirectory()` kako bi pronašla platformski specifičnu mapu i u njoj otvorila `.sqlite` datoteku.
 
 **app_db.dart**
@@ -322,9 +324,9 @@ class AppDb extends _$AppDb {
 }
 ```
 
-`LazyDatabase` otvara bazu tek pri prvom upitu, a `getApplicationDocumentsDirectory()` radi Androidu, iOS i Windowsu jer se povezuje na zadani direktorij za dokumente (primjer. na Windowsu je to **Documents** direktorij).
+`LazyDatabase` otvara bazu tek pri prvom upitu, a `getApplicationDocumentsDirectory()` radi na Androidu, iOS i Windowsu jer se povezuje na zadani direktorij za dokumente (primjer: na Windowsu je to **Documents** direktorij).
 
-`@DriftDatabase(tables: ..., daos: ...)` govori Driftu koje tablice i DAO sadržava. `NativeDatabase()` otvara SQLite datoteku na disku, a `path.join` spaja direktorij i naziv datoteke neovisno o platformi. `schemaVersion` je verzija sheme baze (više u odjeljku za verzioniranje).**
+`@DriftDatabase(tables: ..., daos: ...)` govori Driftu koje tablice i DAO sadržava. `NativeDatabase()` otvara SQLite datoteku na disku, a `path.join` spaja direktorij i naziv datoteke neovisno o platformi. `schemaVersion` je verzija sheme baze (više u poglavlju za verzioniranje baze).
 
 ### 3.8 Data Access Object (DAO)
 
@@ -379,8 +381,8 @@ Specifične naredbe i operandi:
 - `select(author)` započinje upit nad tablicom
 - `..where(...)` dodaje uvjet
 - `.get()` vraća rezultat kao `Future<AuthorData>`
-- `.getSingle()` točno jedan redak
-- `.watch()` reaktivni tok (`Stream`)
+- `.getSingle()` vraća jedan objekt iz liste
+- `.watch()` vraća reaktivni tok (`Stream`)
 - `into(author).insert()` unosi redak u tablicu `Author` i vraća primarni ključ novog retka u tablici
 - `update(author).replace()` ažurira redak u tablici `Author` i vraća je li nađen traženi redak u tablici
 - `delete(author).go()` briše retke iz tablice `Author` i vraća broj redaka koji su izbrisani
@@ -389,7 +391,7 @@ Specifične naredbe i operandi:
 
 - Kreira se nova instanca klase `AppDb` u `main()` funkciji prije pokretanja aplikacije.
 - Instanca baze se prosljeđuje kroz aplikaciju kao argument konstruktora (*constructor injection*).
-- `seedMockData(db)` unosi probne podatke prije prikaza aplikacije
+- `seedMockData(db)` unosi početne podatke prije prikaza aplikacije.
 
 **main.dart**
 
@@ -426,7 +428,7 @@ class AuthorListScreen extends StatelessWidget {
 - Prosljeđuju se vrijednosti iz polja za unos u funkciju `insertAuthor()`.
 - Inicijalizira se novi `AuthorCompanion` s obaveznim atributima: `firstName` i `lastName`.
 - `.insert()` vraća ID novokreiranog zapisa u bazi podataka.
-- koristi se `Value` zato jer se time `AuthorCompanion` objektu naznačuje da je postavljena ta vrijednost, a s druge strane se može koristiti i `Value.absent()` kako bi se naznačilo da nije postavljena određena vrijednost kao na primjer **id** kojeg baza sama kreira
+- Koristi se `Value` zato jer se time `AuthorCompanion` objektu naznačuje da je postavljena određena vrijednost, a s druge strane se može koristiti i `Value.absent()` kako bi se naznačilo da nije postavljena određena vrijednost, kao na primjer **id**, kojeg baza sama kreira.
 
 **author_dao.dart** (metoda za unos autora)
 
@@ -450,6 +452,10 @@ Future<void> _save() async {
         await widget.db.authorDao.insertAuthor(companion);
       }
 ```
+
+**Sučelje za dodavanje nove knjige u bazu:**
+
+![Sučelje za dodavanje](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/CreateUI.png)
 
 ### 4.2. Read
 
@@ -490,6 +496,10 @@ body: StreamBuilder<List<AuthorData>>(
       )
 ```
 
+**Sučelje za prikaz liste autora iz baze:**
+
+![Sučelje za prikaz](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/ReadUI.png)
+
 ### 4.3. Update
 
 - Prosljeđuju se vrijednosti iz polja za unos u funkciju `updateAuthor()`.
@@ -523,6 +533,10 @@ Future<void> _save() async {
     }
 ```
 
+**Sučelje za ažuriranje postojeće knjige:**
+
+![Sučelje za ažuriranje](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/UpdateUI.png)
+
 ### 4.4. Delete
 
 - Prosljeđuje se samo `id` autora u funkciju `deleteAuthor()`.
@@ -546,7 +560,9 @@ IconButton(
 ),
 ```
 
+**Sučelje nakon brisanja svih autora iz baze:**
 
+![Prazno sučelje](https://github.com/SNstat/flutter_local_storage_seminar/blob/main-docs/docs/DeleteUI.png)
 
 ## 5. Spajanja
 
@@ -690,12 +706,12 @@ class AppDb extends _$AppDb {
 ```
 
 `m` je objekt `Migrator` koji izvodi promjene sheme te sadrži nekoliko asinkronih metoda:
-- `createAll()` stvara sve tablice
-- `createTable(tablica)` stvara jednu tablicu na temelju objekta tablice
-- `deleteTable(ime tablice)` briše jednu tablicu na temelju imena tablice
+- `.createAll()` stvara sve tablice
+- `.createTable(tablica)` stvara jednu tablicu na temelju objekta tablice
+- `.deleteTable(ime tablice)` briše jednu tablicu na temelju imena tablice
 - `from` i `to` predstavljaju staru i novu verzija baze
 
-U primjeru, ako je baza bila verzije 1, dodaju se samo nove tablice i postojeći podaci ostaju sačuvani. U suprotnom se sve tablice brišu (`allTables` je popis svih tablica, `actualTableName` njihov naziv u SQL-u) te na kraju i ponovno stvaraju s pomoću metode `createAll()`. Nadalje, `beforeOpen` se izvršava pri svakom otvaranju baze te se zbog toga izvršava u njemu proivoljno definirana funkcija za unos početnih podataka `seeMockData(this)` gdje `this` predstavlja trenutnu konekciju na bazu.**
+U primjeru, ako je baza bila verzije 1, dodaju se samo nove tablice i postojeći podaci ostaju sačuvani. U suprotnom se sve tablice brišu (`allTables` je popis svih tablica, `actualTableName` njihov naziv u SQL-u) te na kraju i ponovno stvaraju s pomoću metode `createAll()`. Nadalje, `beforeOpen` se izvršava pri svakom otvaranju baze te se zbog toga izvršava u njemu proivoljno definirana funkcija za unos početnih podataka `.seedMockData(this)` gdje `this` predstavlja trenutnu konekciju na bazu.**
 
 ## 7. Izolirana pohrana (hive_ce)
 
